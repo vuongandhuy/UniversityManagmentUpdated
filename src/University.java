@@ -206,8 +206,74 @@ public class University
      */
     protected ArrayList<Cohort> sortMethod(ArrayList<Cohort> list, int block_size, boolean ascending, String attr)
     {
+        quickSort(list, 0, list.size() - 1, ascending, attr);
         // TODO
         return list;
+    }
+    private void quickSort(ArrayList<Cohort> list, int low, int high, boolean ascending, String attr) {
+        if (low < high) {
+            int pivotIndex = partition(list, low, high, ascending, attr);
+            quickSort(list, low, pivotIndex - 1, ascending, attr);
+            quickSort(list, pivotIndex + 1, high, ascending, attr);
+
+        }
+    }
+    private int partition(ArrayList<Cohort> list, int low, int high, boolean ascending, String attr) {
+        // Use middle element as pivot
+        int mid = (low + high) / 2;
+        Cohort pivot = list.get(mid);
+
+        // Move pivot to end temporarily
+        swap(list, mid, high);
+
+        int i = low - 1;
+
+        for (int j = low; j < high; j++) {
+            String currentValue = getComparisonValue(list.get(j), attr);
+            String pivotValue = getComparisonValue(pivot, attr);
+
+            boolean shouldSwap = ascending ?
+                    currentValue.compareTo(pivotValue) <= 0 :
+                    currentValue.compareTo(pivotValue) >= 0;
+
+            if (shouldSwap) {
+                i++;
+                swap(list, i, j);
+            }
+        }
+
+        // Move pivot to its final position
+        swap(list, i + 1, high);
+        return i + 1;
+    }
+
+    /**
+     * Helper method to get the comparison value based on attribute
+     *
+     * @param cohort The cohort to get value from
+     * @param attr The attribute ("name" or "code")
+     * @return The string value to compare
+     */
+    private String getComparisonValue(Cohort cohort, String attr) {
+        if (attr.equalsIgnoreCase("name")) {
+            return cohort.getModule().getName();
+        } else {
+            // For code, convert to string for comparison
+            return String.format("%05d", cohort.getModule().getCode());
+        }
+    }
+
+    /**
+     * Swap two elements in the list
+     *
+     * @param list The list
+     * @param i First index
+     * @param j Second index
+     */
+    private void swap(ArrayList<Cohort> list, int i, int j) {
+        Cohort temp = list.get(i);
+        list.set(i, list.get(j));
+        list.set(j, temp);
     }
 
 
