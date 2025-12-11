@@ -1,3 +1,4 @@
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -6,7 +7,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * This UniversityTest class provides different methods of checking the behaviour
@@ -25,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * (iii) list search
  * (iv) list sorting
  * (v) graph loop
- * (vi) check enrolment size
  *
  */
 public class UniversityTest {
@@ -40,7 +41,7 @@ public class UniversityTest {
     public void loadData() {
         stirling.clear();
 
-        Professor[] prof_list = new Professor[]{ new Professor("Alek Sib", 159, "aleksib@stir.ac.uk", "CSM", 1.0),
+        Professor[] prof_list = new Professor[]{new Professor("Alek Sib", 159, "aleksib@stir.ac.uk", "CSM", 1.0),
                 new Professor("Jill Lai", 369, "jl@stir.ac.uk", "CSM", 0.5),
                 new Professor("Kevin Jack", 789, "kj@stir.ac.uk", "CSM", 1.0),
                 new Professor("Guy F", 654, "gf@stir.ac.uk", "BES/CSM", 0.75),
@@ -48,7 +49,7 @@ public class UniversityTest {
                 new Professor("Lett A", 580, "la@stir.ac.uk", "CSM", 0.5),
                 new Professor("Stephanie A", 999, "sa@stir.ac.uk", "BES/CSM", 1.0),};
 
-        Student[] list = new Student[]{ new Student("John J", 147, "jj@stir.ac.uk"),
+        Student[] list = new Student[]{new Student("John J", 147, "jj@stir.ac.uk"),
                 new Student("Kate K", 565, "kk@stir.ac.uk"),
                 new Student("Loius L", 6542, "ll@stir.ac.uk"),
                 new Student("Zhang Z", 805, "zz@stir.ac.uk"),
@@ -121,10 +122,11 @@ public class UniversityTest {
 
     /**
      * Print the contents of the ArrayList 'list' to standard output.
+     *
      * @param list The list to print
      */
     public void printArrayList(ArrayList<Cohort> list) {
-        for (Cohort v:list) {
+        for (Cohort v : list) {
             System.out.println(v.toString());
         }
     }
@@ -195,16 +197,46 @@ public class UniversityTest {
      */
     @Test
     public void walkTest() {
-        // TODO
-    }
+        loadData();
 
+        // Test multiple cohort walks
+        for (int i = 0; i < 3; i++) {
+            String result = stirling.walkTree(i, "inOrder");
+            assertNotNull(result);
+            System.out.println("Cohort " + i + ": " + result);
+        }
+    }
 
     /**
      * A test for the graph loop
      */
     @Test
     public void loopSearchTest() {
-        // TODO
+        loadData();
+
+        // Original graph contains cycles
+        assertTrue(stirling.checkForCycles(), "Complex module graph has cycles");
+
+        // Create linear dependency test
+        University testUni = new University();
+        Professor prof = new Professor("Test", 1, "t@uni.ac.uk", "CSM", 1.0);
+
+        Module[] modules = {
+                new Module(1, "Start"),
+                new Module(2, "Middle"),
+                new Module(3, "End")
+        };
+
+        // Linear: Start → Middle → End
+        modules[1].addPrerequisites(modules[0]);
+        modules[2].addPrerequisites(modules[1]);
+
+        for (Module m : modules) {
+            testUni.addClass(new Cohort(m, new BinaryTree(), prof));
+        }
+
+        // No cycles in linear chain
+        Assertions.assertFalse(testUni.checkForCycles(), "Straight path has no cycles");
     }
 
     /**
@@ -212,6 +244,15 @@ public class UniversityTest {
      */
     @Test
     public void findTest() {
+        loadData();
+
+        // Search for student "John J" in cohort 0
+        Student found = stirling.find(0, "John J");
+        assertNotNull(found);
+
+        // Search for non-existent student
+        Student notFound = stirling.find(0, "Ghost Student");
+        assertNull(notFound);
 
     }
 
@@ -229,16 +270,84 @@ public class UniversityTest {
      */
     @Test
     public void searchTest() {
-        // TODO
+        loadData();
+
+        // Search for module "Introduction to Data Science"
+        Module found = stirling.searchForModule("Introduction to Data Science");
+        assertNotNull(found);
+
+        // Search for non-existent module
+        Module notFound = stirling.searchForModule("Fake Module");
+        assertNull(notFound);
     }
 
 
     /**
      * A test for the sorting method
      */
+
+
     @Test
     public void sortingTest() {
-        // TODO
+
+        // Test sorting by name in increasing order
+        loadData();
+        ArrayList<Cohort> nameAscResult = stirling.sortMethod(true, "name");
+        assertTrue(verifyNameOrder(nameAscResult, true),
+                "Module names should be in alphabetical order");
+
+        // Test sorting by name in decreasing order
+        loadData();
+        ArrayList<Cohort> nameDescResult = stirling.sortMethod(false, "name");
+        assertTrue(verifyNameOrder(nameDescResult, false),
+                "Module names should be in reverse alphabetical order");
+
+        // Test sorting by module code from low to high
+        loadData();
+        ArrayList<Cohort> codeAscResult = stirling.sortMethod(true, "code");
+        assertTrue(verifyCodeOrder(codeAscResult, true),
+                "Module codes should be in ascending order");
+
+        // Test sorting by module code from high to low
+        loadData();
+        ArrayList<Cohort> codeDescResult = stirling.sortMethod(false, "code");
+        assertTrue(verifyCodeOrder(codeDescResult, false),
+                "Module codes should be in descending order");
+
+        // Check edge case: List with only one element
+        University singleItem = new University();
+        Professor prof = new Professor("Sample", 1, "sample@stir.ac.uk", "CSM", 1.0);
+        singleItem.addClass(new Cohort(new Module(999, "Only Module"), new BinaryTree(), prof));
+
+        ArrayList<Cohort> singleSorted = singleItem.sortMethod(true, "name");
+        assertEquals(1, singleSorted.size(), "Single element list size should be 1");
+    }
+
+    // Helper to validate name ordering
+    private boolean verifyNameOrder(ArrayList<Cohort> cohorts, boolean increasing) {
+        for (int i = 0; i < cohorts.size() - 1; i++) {
+            String currentName = cohorts.get(i).getModule().getName();
+            String nextName = cohorts.get(i + 1).getModule().getName();
+
+            int comparison = currentName.compareTo(nextName);
+
+            if (increasing && comparison > 0) return false;
+            if (!increasing && comparison < 0) return false;
+        }
+        return true;
+    }
+
+    // Helper to validate code ordering
+    private boolean verifyCodeOrder(ArrayList<Cohort> cohorts, boolean increasing) {
+        for (int i = 0; i < cohorts.size() - 1; i++) {
+            int currentCode = cohorts.get(i).getModule().getCode();
+            int nextCode = cohorts.get(i + 1).getModule().getCode();
+
+            if (increasing && currentCode > nextCode) return false;
+            if (!increasing && currentCode < nextCode) return false;
+        }
+        return true;
+
     }
 
     /**
@@ -246,22 +355,75 @@ public class UniversityTest {
      */
     @Test
     public void sortingSpeedTest() {
-        // some example code to generate 100 students at random
-        Student[] students = new Student[100];
-        Random r = new Random(1);
-        for (int i = 0; i < students.length; i++) {
-            students[i] = new Student(r);
-            System.out.println(students[i]);
+        int[] sizes = {100, 500, 1000, 5000, 10000};
+
+        System.out.println("\n=== QuickSort Time Analysis ===");
+        System.out.println("Using nanoTime() for precision, converting to milliseconds");
+        System.out.println("=========================================================");
+        System.out.printf("%-10s %-15s %-15s %-15s%n",
+                "Size(n)", "Time(ms)", "n log n", "Ratio");
+        System.out.println("---------------------------------------------------------");
+
+        Random r = new Random(42); // Fixed seed for consistency
+
+        for (int size : sizes) {
+            // Create test university
+            University uni = new University();
+            Professor prof = new Professor("Prof", 1, "p@test.com", "CSM", 1.0);
+
+            // Add random modules
+            for (int i = 0; i < size; i++) {
+                Module m = new Module(i, "Course" + r.nextInt(10000));
+                uni.addClass(new Cohort(m, new BinaryTree(), prof));
+            }
+
+            // Measure with nanoTime, convert to milliseconds
+            long startNano = System.nanoTime();
+            uni.sortMethod(true, "name");
+            long endNano = System.nanoTime();
+
+            // Convert nanoseconds to milliseconds (1 ms = 1,000,000 ns)
+            double timeMs = (endNano - startNano) / 1_000_000.0;
+
+            // Calculate n log n
+            double nLogN = size * (Math.log(size) / Math.log(2));
+            double ratio = timeMs / nLogN;
+
+            System.out.printf("%-10d %-15.3f %-15.0f %-15.6f%n",
+                    size, timeMs, nLogN, ratio);
         }
-
-
     }
 
-    /**
-     * A test for the module enrolment
-     */
-    @Test
-    public void checkModuleEnrolment() {
-        // TODO
+        /**
+         * A test for the module enrolment
+         */
+        @Test
+        public void checkModuleEnrolment () {
+            Student s = new Student("Sam", 999, "sam@stir.ac.uk");
+
+            // Create modules
+            Module[] modules = new Module[6];
+            for (int i = 0; i < 6; i++) {
+                modules[i] = new Module(i + 100, "Course" + i);
+            }
+
+            // Add first 5 modules (should work)
+            for (int i = 0; i < 5; i++) {
+                assertTrue(s.addModule(modules[i]));
+            }
+
+            // Try 6th module (should fail - max reached)
+            Assertions.assertFalse(s.addModule(modules[5]));
+
+            // Try duplicate (should fail)
+            Assertions.assertFalse(s.addModule(modules[0]));
+
+            // Remove one module
+            assertTrue(s.removeModule(modules[0]));
+
+            // Add the 6th module now (should work)
+            assertTrue(s.addModule(modules[5]));
+        }
     }
-}
+
+
