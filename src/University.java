@@ -15,8 +15,10 @@ import java.util.Map;
  *  the local modules object as a parameter. You can observe calls to these public
  *  methods in the go methods of UniversityTest.java.
  */
-public class University
-{
+public class University {
+private static long comparisonCount = 0;
+private static long swapCount = 0;
+private static long recursiveCallCount = 0;
     private ArrayList<Cohort> cohorts;
     private Graph graph;
 
@@ -120,9 +122,31 @@ public class University
      *
      * @return true, if there is a cycle, false otherwise
      */
-    protected boolean checkForCycles(Graph graph, Module node, Map<Module, Boolean> visited, Map<Module, Boolean> beingVisited)
-    {
-        // TODO
+    protected boolean checkForCycles(Graph graph, Module node, Map<Module, Boolean> visited, Map<Module, Boolean> beingVisited) {
+        // If node is currently being visited, we found a cycle
+        if (beingVisited.containsKey(node) && beingVisited.get(node)) {
+            return true;
+        }
+
+        // If node was already visited completely, no cycle from this branch
+        if (visited.containsKey(node) && visited.get(node)) {
+            return false;
+        }
+
+        // Mark node as being visited
+        beingVisited.put(node, true);
+
+        // Visit all neighbors
+        for (Module neighbor : graph.getAdj(node)) {
+            if (checkForCycles(graph, neighbor, visited, beingVisited)) {
+                return true;
+            }
+        }
+
+        // Mark node as visited and remove from beingVisited
+        beingVisited.put(node, false);
+        visited.put(node, true);
+
         return false;
     }
 
@@ -206,76 +230,87 @@ public class University
      */
     protected ArrayList<Cohort> sortMethod(ArrayList<Cohort> list, int block_size, boolean ascending, String attr)
     {
+        // Implement quicksort with middle element as pivot
+        if (list == null || list.size() <= 1) {
+            return list;
+        }
+
         quickSort(list, 0, list.size() - 1, ascending, attr);
-        // TODO
         return list;
     }
+
+    // Helper method for quicksort
     private void quickSort(ArrayList<Cohort> list, int low, int high, boolean ascending, String attr) {
+        recursiveCallCount++;  // Count this recursive call
+
         if (low < high) {
             int pivotIndex = partition(list, low, high, ascending, attr);
             quickSort(list, low, pivotIndex - 1, ascending, attr);
             quickSort(list, pivotIndex + 1, high, ascending, attr);
-
         }
     }
+
     private int partition(ArrayList<Cohort> list, int low, int high, boolean ascending, String attr) {
         // Use middle element as pivot
-        int mid = (low + high) / 2;
+        int mid = low + (high - low) / 2;
         Cohort pivot = list.get(mid);
 
-        // Move pivot to end temporarily
+        // Move pivot to the end temporarily
         swap(list, mid, high);
+        swapCount++;  // Count this swap
 
-        int i = low - 1;
+        int i = low;
 
         for (int j = low; j < high; j++) {
-            String currentValue = getComparisonValue(list.get(j), attr);
-            String pivotValue = getComparisonValue(pivot, attr);
+            comparisonCount++;  // Count each comparison
+            int comparison = compareCohorts(list.get(j), pivot, attr);
 
-            boolean shouldSwap = ascending ?
-                    currentValue.compareTo(pivotValue) <= 0 :
-                    currentValue.compareTo(pivotValue) >= 0;
-
-            if (shouldSwap) {
-                i++;
-                swap(list, i, j);
+            if (ascending) {
+                if (comparison <= 0) {
+                    swap(list, i, j);
+                    swapCount++;  // Count this swap
+                    i++;
+                }
+            } else {
+                if (comparison >= 0) {
+                    swap(list, i, j);
+                    swapCount++;  // Count this swap
+                    i++;
+                }
             }
         }
 
         // Move pivot to its final position
-        swap(list, i + 1, high);
-        return i + 1;
-    }
+        swap(list, i, high);
+        swapCount++;  // Count this swap
 
-    /**
-     * Helper method to get the comparison value based on attribute
-     *
-     * @param cohort The cohort to get value from
-     * @param attr The attribute ("name" or "code")
-     * @return The string value to compare
-     */
-    private String getComparisonValue(Cohort cohort, String attr) {
+        return i;
+    }
+    // Compare two cohorts based on name or code
+    private int compareCohorts(Cohort c1, Cohort c2, String attr) {
         if (attr.equalsIgnoreCase("name")) {
-            return cohort.getModule().getName();
-        } else {
-            // For code, convert to string for comparison
-            return String.format("%05d", cohort.getModule().getCode());
+            return c1.getModule().getName().compareTo(c2.getModule().getName());
+        } else { // "code"
+            return Integer.compare(c1.getModule().getCode(), c2.getModule().getCode());
         }
     }
 
-    /**
-     * Swap two elements in the list
-     *
-     * @param list The list
-     * @param i First index
-     * @param j Second index
-     */
+    // Swap two elements in the list
     private void swap(ArrayList<Cohort> list, int i, int j) {
         Cohort temp = list.get(i);
         list.set(i, list.get(j));
         list.set(j, temp);
     }
+    public static String getInstrumentationStats() {
+        return String.format("Comparisons: %d, Swaps: %d, Recursive Calls: %d",
+                comparisonCount, swapCount, recursiveCallCount);
+    }
 
+        public static void resetInstrumentation() {
+            comparisonCount = 0;
+            swapCount = 0;
+            recursiveCallCount = 0;
+        }
 
 }
 
